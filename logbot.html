@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08172b">
+<title>Launch Log</title>
+<style>
+:root{
+ --bg:#08172b;--surf:#0f2540;--surf2:#183355;--line:#26456e;
+ --tx:#ffffff;--mut:#94aecd;
+ --or:#f47b20;--or-dim:#4a2a0f;--or-tx:#ffb877;
+ --grn:#35c46a;--grn-dim:#0f3222;--grn-tx:#8ff0b0;
+ --lime:#a8e337;--lime-dim:#25330c;
+ --lred:#f4a3a3;--lred-dim:#3d1a1a;
+ --ink:#08172b;--tap:64px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--bg);color:var(--tx);
+ font:16px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding-bottom:232px}
+.num{font-variant-numeric:tabular-nums}
+header{position:sticky;top:0;z-index:20;background:var(--surf);
+ border-bottom:1px solid var(--line);padding:10px 12px}
+.hrow{display:flex;gap:8px}
+.hrow input,.hrow select{flex:1;min-width:0;background:var(--surf2);color:var(--tx);
+ border:1px solid var(--line);border-radius:8px;padding:11px 10px;font-size:16px}
+.hrow input::placeholder{color:var(--mut)}
+.hrow+.hrow{margin-top:8px}
+.clock{display:flex;justify-content:space-between;align-items:center;margin-top:10px;
+ gap:10px;cursor:pointer;user-select:none}
+.pct{flex:none;background:var(--lime);color:#16200a;font-weight:800;font-size:17px;
+ border-radius:9px;padding:6px 11px;font-variant-numeric:tabular-nums}
+.pct.full{background:var(--grn)}
+.clock b{font-size:30px;font-weight:600;letter-spacing:-.5px;color:#fff}
+.clock span{color:var(--mut);font-size:13px;text-align:right}
+main{padding:12px}
+.step{background:var(--surf);border:1px solid var(--line);border-radius:10px;
+ margin-bottom:8px;overflow:hidden}
+.step.done{border-color:var(--grn);background:var(--grn-dim)}
+.step.cur{border-color:var(--or)}
+.step.lock{opacity:.5}
+.hit{display:flex;align-items:center;gap:12px;min-height:var(--tap);
+ padding:10px 12px;cursor:pointer;user-select:none}
+.dot{width:26px;height:26px;flex:none;border-radius:50%;border:2px solid var(--line);
+ display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:var(--mut)}
+.done .dot{background:var(--grn);border-color:var(--grn);color:var(--ink)}
+.cur .dot{border-color:var(--or);color:var(--or)}
+.lbl{flex:1;font-size:16px;line-height:1.25}
+.done .lbl{color:#cfe8d8}
+.stamp{font-size:16px;font-weight:600;color:var(--grn-tx);flex:none}
+.dur{font-size:12px;color:var(--mut);display:block;font-weight:400}
+.call{display:block;margin-top:3px;font-size:12px;font-weight:700;color:var(--lime);letter-spacing:.2px}
+.step.issue{border-color:var(--lred)}
+.exp{flex:none;width:40px;height:40px;border-radius:9px;background:var(--surf2);
+ border:1px solid var(--line);color:var(--tx);font-size:24px;font-weight:700;line-height:1;
+ font-family:inherit;display:flex;align-items:center;justify-content:center}
+.btns{display:flex;gap:8px;padding:0 12px 11px}
+.btns button{flex:1;min-height:50px;border-radius:9px;border:0;font-size:15px;
+ font-weight:700;font-family:inherit}
+.bdone{background:var(--grn);color:var(--ink)}
+.bissue{background:var(--lred);color:#2b0b0b}
+.body{border-top:1px solid var(--line);padding:10px 12px;background:#0b1e36}
+.done .body{background:#0c2418}
+.cap{font-size:12px;color:var(--mut);margin:0 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--surf2);border:1px solid var(--line);color:var(--tx);
+ border-radius:8px;padding:11px 12px;font-size:14px;min-height:44px;cursor:pointer;
+ text-align:left;font-family:inherit}
+.chip.on{background:var(--lred);border-color:var(--lred);color:#2b0b0b;font-weight:600}
+.chip.good.on{background:var(--lime);border-color:var(--lime);color:#16200a;font-weight:700}
+.chip.flag.on{background:var(--or);border-color:var(--or);color:var(--ink);font-weight:700}
+.chip.mine{border-left:3px solid #fff}
+.chip.other{border-style:dashed;color:var(--mut)}
+.row{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px}
+.row .tag{flex:none;font-weight:700;font-size:11px;padding:4px 7px;border-radius:5px}
+.row .tag.m{background:var(--lred);color:#2b0b0b}
+.row .txt{flex:1;color:var(--mut)}
+.row button{border-radius:7px;min-height:40px;padding:0 11px;font-size:13px;font-weight:600;
+ font-family:inherit;background:var(--surf2);border:1px solid var(--line);color:var(--tx)}
+.row button.sel{background:var(--grn);border-color:var(--grn);color:var(--ink)}
+.row button.selbad{background:var(--lred);border-color:var(--lred);color:#2b0b0b}
+.note{width:100%;margin-top:8px;background:var(--surf2);color:var(--tx);
+ border:1px solid var(--line);border-radius:8px;padding:11px;font-size:16px;
+ font-family:inherit;resize:vertical}
+.note::placeholder{color:var(--mut)}
+.nlab{display:block;margin-top:10px;font-size:11px;font-weight:700;color:var(--mut);letter-spacing:.6px}
+.flagmsg{margin-top:8px;font-size:13px;color:var(--lred);line-height:1.35}
+.hint{margin-top:8px;font-size:11px;color:var(--mut)}
+.review{background:var(--surf);border:2px solid var(--lime);border-radius:12px;
+ padding:0 12px 12px;margin-top:4px}
+.review h3{margin:0 -12px 10px;padding:20px 14px;background:var(--lime);color:#16200a;
+ font-size:20px;font-weight:800;letter-spacing:.3px;line-height:1.2;text-align:center;
+ border-radius:10px 10px 0 0}
+.review .sub{margin:0 0 10px;font-size:12px;color:var(--mut);text-align:center}
+.rrow{padding:9px 0;border-top:1px solid var(--line)}
+.rname{font-size:14px;margin-bottom:6px;line-height:1.25}
+.rt{display:flex;align-items:center;gap:8px}
+.rt input[type=time]{background:var(--surf2);color:#fff;border:1px solid var(--line);
+ border-radius:8px;padding:9px 8px;font-size:16px;font-family:inherit;min-height:44px}
+.ro{border:1px solid var(--line);border-radius:8px;padding:9px 8px;font-size:16px;
+ min-height:44px;display:flex;align-items:center;color:var(--mut);font-variant-numeric:tabular-nums}
+.arrow{color:var(--mut);font-size:13px}
+.rgo{width:100%;margin-top:14px;border:0;border-radius:10px;min-height:62px;font-size:17px;
+ font-weight:800;font-family:inherit;background:var(--lime);color:#16200a;letter-spacing:.3px}
+.rgo.ok{background:var(--grn);color:var(--ink);font-size:15px}
+.rgo[disabled]{opacity:.4}
+.len{margin-left:auto;font-size:13px;color:var(--grn-tx);font-variant-numeric:tabular-nums}
+.rrow.top .len{color:var(--or-tx);font-weight:800}
+.bar{height:5px;border-radius:3px;background:var(--surf2);margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:3px;background:var(--grn)}
+.rrow.top .bar i{background:var(--or)}
+.rnum{color:var(--mut);font-weight:700}
+footer{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--surf);
+ border-top:1px solid var(--line);padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.fbtn{width:100%;border:0;border-radius:12px;min-height:76px;font-size:20px;
+ font-weight:800;color:var(--ink);background:var(--lime);margin-bottom:8px;font-family:inherit;
+ letter-spacing:.3px}
+.fsub{display:flex;gap:8px}
+.fsub+.fsub{margin-top:8px}
+.fsub button{flex:1;background:var(--surf2);color:var(--tx);border:1px solid var(--line);
+ border-radius:10px;min-height:48px;font-size:15px;font-weight:600;font-family:inherit}
+.fsub button[disabled]{opacity:.35}
+.veil{position:fixed;inset:0;background:rgba(3,10,20,.78);z-index:50;display:flex;align-items:flex-end}
+.sheet{width:100%;max-height:88vh;overflow:auto;background:var(--surf);
+ border-radius:16px 16px 0 0;padding:16px 14px calc(20px + env(safe-area-inset-bottom))}
+.sheet h2{margin:0 0 4px;font-size:19px;color:#fff}
+.sheet p{margin:0 0 14px;color:var(--mut);font-size:13px}
+.close{width:100%;margin-top:10px;background:var(--surf2);color:var(--tx);
+ border:1px solid var(--line);border-radius:10px;min-height:50px;font-size:16px;
+ font-weight:600;font-family:inherit}
+.go{background:var(--or);color:var(--ink);border:0}
+.alt{background:#fff;color:var(--ink);border:0}
+pre.out{white-space:pre-wrap;word-break:break-word;background:var(--bg);
+ border:1px solid var(--line);border-radius:8px;padding:12px;font-size:12px;
+ line-height:1.45;max-height:44vh;overflow:auto;color:var(--tx)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <input id="truck" placeholder="Truck" autocomplete="off">
+    <input id="trailer" placeholder="Trailer" autocomplete="off">
+  </div>
+  <div class="hrow">
+    <select id="mission"><option value="">Mission type</option>
+      <option>Commercial</option><option>CI</option><option>Dev test</option>
+      <option>Tac Dev</option><option>Other</option></select>
+    <input id="op" placeholder="TO initials" autocomplete="off">
+  </div>
+  <div class="clock" id="clock"><b class="num" id="elapsed">0:00</b>
+    <span class="pct num" id="pct">0%</span>
+    <span id="sub">Tap a step when you finish it</span></div>
+</header>
+
+<main id="steps"></main>
+
+<footer>
+  <button class="fbtn" id="expBtn" style="display:none">FINISH &amp; EXPORT</button>
+  <div class="fsub">
+    <button id="undoBtn">Undo</button>
+    <button id="resetBtn">Reset last step</button>
+  </div>
+  <div class="fsub">
+    <button id="offBtn">Unusual event</button>
+  </div>
+</footer>
+
+<div id="modal"></div>
+
+<script>
+const TS_CHIP="Opened TS thread", MX_CHIP="Truck / trailer MX required";
+const STEPS=[
+ ["ATMS checked, keys + bricks pulled",["No bricks / waiting for offload","Truck keys missing","Truck not on yard","Trailer not on yard"]],
+ ["Bricks installed, truck started",["Truck won't start","Need to service coolant / oil / fluid"]],
+ ["Started compute",[]],
+ ["Connected to trailer",["BOL in hand / BOL in TruckBook"]],
+ ["Sensors cleaned",[]],
+ ["Scale ticket in hand",["Slid tandems","Moved 5th wheel","5th wheel pins stuck","Re-scaled","Scale down / occupied"]],
+ ["Started SW pull",["SW pull complete","SW pull not needed","Brick issues","Ethernet issues","Pull taking 20+ minutes","Cold started and retried","Truck not connected","Compute slow to connect"]],
+ ["Truck EPTI in progress",["EPTI complete","Quick fix on the spot","Ryder / SEO required","DVIR required"]],
+ ["Trailer EPTI in progress",["EPTI complete","Quick fix on the spot","Ryder / SEO required","DVIR required"]],
+ ["Inspector App / Drivewyze entered",["Had an issue"]],
+ ["Fuel / DEF / KPRA are good to go",["Fuel island occupied","KPRA out of spec"]],
+ ["Starting Trip Data Sync",["TDS complete","Taking longer than normal","Trip data failing"]],
+ ["Started calibration stack / cal not required",["Calibration passed","SYTE running","Calibration failing"]],
+ ["Requested dispatch confirm order",["Order confirmed","Dispatch slow to answer","Couldn't reach dispatch","Confirm triggered a 2nd SW pull"],"Confirm triggered a 2nd SW pull"],
+ ["Starting config / attempting ready state / finishing up app",["Got a ready state","Can't get pose","Needed to cycle DBW","Inspection wasn't submitted"]],
+ ["Truck departed",[]]
+];
+const CALLS=[
+ "10-4 good buddy, all copy. We are go for launch here! Over and out!",
+ "Alright, you can do it",
+ "Another one bites the dust",
+ "Nice nice, keep going",
+ "Squeaky clean \u2014 she can see again",
+ "Legal and weighed. Tandems did not win today",
+ "IT PULLED. Nobody touch anything",
+ "Truck's inspected. Look at you go",
+ "Trailer's buttoned up. Halfway home",
+ "Paperwork's in. Nobody can say you didn't",
+ "Fed, watered, and measured",
+ "Trip data's flowing. Breathe",
+ "CALIBRATION PASSED. Somebody honk a horn",
+ "Ball's in dispatch's court now",
+ "Stack's going autonomous. Hold your breath",
+ "Wheels rolling. That's a launch"
+];
+/* step 15 gets its own callout, but ONLY if the ready-state chip is on it */
+const READY_STEP=14, READY_CHIP="Got a ready state";
+const READY_CALL="Um, I can't believe I'm saying this, but Houston, we have NO problems. Can you believe it? SEND IT!!";
+/* steps where an Mx finding makes no sense (EPTI has its own DVIR / Ryder path) */
+const NO_MX=[7,8];
+/* chips that mean something went RIGHT \u2014 these go lime, not light red */
+const GOOD=["SW pull not needed","SW pull complete","EPTI complete","TDS complete",
+ "Calibration passed","Order confirmed","Got a ready state","BOL in hand / BOL in TruckBook"];
+const LAST=STEPS.length-1;
+
+const blank=()=>({start:null,steps:STEPS.map(()=>({t:null,br:[],note:""})),
+ offs:[],mxs:{},timesOk:false,hdr:{truck:"",trailer:"",mission:"",op:""}});
+let S=blank(), CUSTOM={steps:{}}, longPressed=false, UNDO=[];
+const snap=()=>{UNDO.push(JSON.stringify(S));if(UNDO.length>40)UNDO.shift();};
+
+const DB={async get(k){try{if(window.storage){const r=await window.storage.get(k);return r?r.value:null;}
+  return localStorage.getItem(k);}catch(e){return null;}},
+ async set(k,v){try{if(window.storage){await window.storage.set(k,v);return;}
+  localStorage.setItem(k,v);}catch(e){}}};
+const save=()=>DB.set("launchlog",JSON.stringify(S));
+const saveCustom=()=>DB.set("launchlog_custom",JSON.stringify(CUSTOM));
+
+const pad=n=>String(n).padStart(2,"0");
+const clock=t=>{const d=new Date(t);return pad(d.getHours())+":"+pad(d.getMinutes());};
+const mmss=ms=>{const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+":"+pad(s%60);};
+const mins=ms=>Math.max(0,Math.round(ms/60000));
+const myChips=i=>CUSTOM.steps[i]||[];
+const universal=i=>NO_MX.includes(i)?[TS_CHIP]:[TS_CHIP,MX_CHIP];
+const allButLast=()=>S.steps.slice(0,LAST).every(x=>x.t);
+const locked=i=>i===LAST&&!allButLast();
+function prevT(i){for(let j=i-1;j>=0;j--)if(S.steps[j].t)return S.steps[j].t;return S.start;}
+function curIdx(){const i=S.steps.findIndex(s=>!s.t);return i<0?STEPS.length:i;}
+function lastDoneIdx(){let b=-1,t=0;S.steps.forEach((x,i)=>{if(x.t&&x.t>=t){t=x.t;b=i;}});return b;}
+const stamp=()=>{if(!S.start)S.start=Date.now();return Date.now();};
+const hhmm=t=>{const d=new Date(t);return pad(d.getHours())+":"+pad(d.getMinutes());};
+function durations(){
+ const a=S.steps.map((x,i)=>({i:i,t:x.t})).filter(x=>x.t).sort((x,y)=>x.t-y.t);
+ let prev=S.start;
+ a.forEach(x=>{x.start=prev;x.dur=Math.max(0,x.t-prev);prev=x.t;});
+ return a;}
+function setTime(orig,val){const parts=val.split(":");
+ const d=new Date(orig);d.setHours(+parts[0],+parts[1],0,0);return d.getTime();}
+function pressable(el,fn){let tm;
+ const d=()=>{longPressed=false;tm=setTimeout(()=>{longPressed=true;fn();},600);};
+ const u=()=>clearTimeout(tm);
+ el.addEventListener("pointerdown",d);
+ ["pointerup","pointerleave","pointercancel"].forEach(e=>el.addEventListener(e,u));}
+
+let OPEN={};
+
+function render(){
+ const host=document.getElementById("steps"),ci=curIdx();
+ host.innerHTML="";
+ STEPS.forEach((def,i)=>{
+  const st=S.steps[i],done=!!st.t,cur=i===ci,lk=locked(i),open=!!OPEN[i];
+  const bad=!done&&st.br.some(x=>!GOOD.includes(x));
+  const el=document.createElement("div");
+  el.className="step"+(done?" done":"")+(cur&&!lk&&!done?" cur":"")+
+   (lk?" lock":"")+(bad?" issue":"");
+
+  const hit=document.createElement("div");hit.className="hit";
+  const dot=document.createElement("div");dot.className="dot";
+  dot.textContent=done?"\u2713":(lk?"\u2014":(i+1));
+  const lbl=document.createElement("div");lbl.className="lbl";
+  const callTxt=(i===READY_STEP)
+   ?(st.br.includes(READY_CHIP)?READY_CALL:CALLS[i])
+   :CALLS[i];
+  lbl.innerHTML=def[0]+
+   (done?'<span class="call">'+callTxt+'</span><span class="dur num">+'+
+     mins(st.t-prevT(i))+' min</span>':'')+
+   (lk?'<span class="dur">Finish the steps above first</span>':'');
+  hit.appendChild(dot);hit.appendChild(lbl);
+  if(done){const sp=document.createElement("div");sp.className="stamp num";
+   sp.textContent=clock(st.t);hit.appendChild(sp);}
+  if(!lk){const ex=document.createElement("button");ex.className="exp";
+   ex.textContent=open?"\u2212":"+";
+   ex.onclick=e=>{e.stopPropagation();OPEN[i]=!open;render();};
+   hit.appendChild(ex);}
+  hit.onclick=()=>{if(longPressed){longPressed=false;return;}
+   if(!lk){OPEN[i]=!open;render();}};
+  if(done)pressable(hit,()=>{snap();st.t=null;save();render();});
+  el.appendChild(hit);
+
+  if(!done&&!lk){
+   const bw=document.createElement("div");bw.className="btns";
+   const bd=document.createElement("button");bd.className="bdone";bd.textContent="Completed";
+   bd.onclick=e=>{e.stopPropagation();snap();st.t=stamp();OPEN[i]=false;save();render();};
+   const bi=document.createElement("button");bi.className="bissue";bi.textContent="Having issues";
+   bi.onclick=e=>{e.stopPropagation();stamp();OPEN[i]=true;save();render();};
+   bw.appendChild(bd);bw.appendChild(bi);el.appendChild(bw);}
+
+  if(open&&!lk)el.appendChild(bodyFor(i,def,st,done));
+  host.appendChild(el);});
+ if(S.start&&S.steps.every(x=>x.t))host.appendChild(review());
+ tick();
+}
+
+function bodyFor(i,def,st,done){
+ const b=document.createElement("div");b.className="body";
+ b.innerHTML='<p class="cap">What happened here?</p>';
+ const cw=document.createElement("div");cw.className="chips";
+ const base=def[1].concat(universal(i));
+ base.concat(myChips(i)).forEach((txt,n)=>{
+  const mine=n>=base.length;
+  const c=document.createElement("button");
+  c.className="chip"+(GOOD.includes(txt)?" good":"")+(def[2]===txt?" flag":"")+
+   (mine?" mine":"")+(st.br.includes(txt)?" on":"");
+  c.textContent=txt;
+  c.onclick=e=>{e.stopPropagation();if(longPressed){longPressed=false;return;}
+   snap();const k=st.br.indexOf(txt);
+   if(k<0){st.br.push(txt);stamp();}else st.br.splice(k,1);
+   save();render();};
+  if(mine)pressable(c,()=>{CUSTOM.steps[i]=myChips(i).filter(x=>x!==txt);
+   const k=st.br.indexOf(txt);if(k>-1)st.br.splice(k,1);saveCustom();save();render();});
+  cw.appendChild(c);});
+ const o=document.createElement("button");
+ o.className="chip other";o.textContent="+ Something else";
+ o.onclick=e=>{e.stopPropagation();addChip(i);};
+ cw.appendChild(o);
+ b.appendChild(cw);
+
+ if(st.br.includes(MX_CHIP)){
+  const r=document.createElement("div");r.className="row";
+  const tag=document.createElement("span");tag.className="tag m";tag.textContent="MX";
+  const tx=document.createElement("span");tx.className="txt";tx.textContent="Outcome";
+  r.appendChild(tag);r.appendChild(tx);
+  [["Resolved","sel"],["Unresolved","selbad"]].forEach(function(pair){
+   const bt=document.createElement("button");
+   bt.className=S.mxs[i]===pair[0]?pair[1]:"";bt.textContent=pair[0];
+   bt.onclick=e=>{e.stopPropagation();snap();
+    S.mxs[i]=S.mxs[i]===pair[0]?"":pair[0];save();render();};
+   r.appendChild(bt);});
+  b.appendChild(r);}
+
+ const lab=document.createElement("span");lab.className="nlab";lab.textContent="NOTES:";
+ b.appendChild(lab);
+ const ta=document.createElement("textarea");
+ ta.className="note";ta.rows=2;ta.value=st.note;ta.placeholder="";
+ ta.oninput=e=>{st.note=e.target.value;save();};
+ ta.onclick=e=>e.stopPropagation();
+ b.appendChild(ta);
+
+ if(def[2]&&st.br.includes(def[2])){
+  const f=document.createElement("div");f.className="flagmsg";
+  f.textContent="Flagged \u2014 known defect. Note when the pull kicked off so it can be reported.";
+  b.appendChild(f);}
+ const h=document.createElement("p");h.className="hint";
+ h.textContent=(myChips(i).length?"White-edged ones are yours \u2014 hold to remove. ":"")+
+  (done?"Hold the step title to undo its time.":"");
+ if(h.textContent.trim())b.appendChild(h);
+ return b;}
+
+function review(){
+ const w=document.createElement("div");w.className="review";
+ w.innerHTML='<h3>ADJUST YOUR TIMES IF NEEDED</h3>'+
+  '<p class="sub">Longest first. Tap any finish time to correct it.</p>';
+
+ const r0=document.createElement("div");r0.className="rrow";
+ r0.style.borderTop="0";
+ r0.innerHTML='<div class="rname">Launch start</div>';
+ const t0=document.createElement("div");t0.className="rt";
+ const i0=document.createElement("input");i0.type="time";i0.value=hhmm(S.start);
+ i0.onchange=e=>{if(!e.target.value)return;snap();
+  S.start=setTime(S.start,e.target.value);S.timesOk=false;save();render();};
+ t0.appendChild(i0);r0.appendChild(t0);w.appendChild(r0);
+
+ const rows=durations().slice().sort((x,y)=>y.dur-x.dur);
+ const max=rows.length?rows[0].dur:0;
+ rows.forEach((d,rank)=>{
+  const st=S.steps[d.i];
+  const r=document.createElement("div");r.className="rrow"+(rank<3&&d.dur>0?" top":"");
+  const n=document.createElement("div");n.className="rname";
+  n.innerHTML='<span class="rnum">'+(d.i+1)+'.</span> '+STEPS[d.i][0];
+  r.appendChild(n);
+  const t=document.createElement("div");t.className="rt";
+  const ro=document.createElement("div");ro.className="ro";ro.textContent=hhmm(d.start);
+  const ar=document.createElement("span");ar.className="arrow";ar.textContent="\u2192";
+  const inp=document.createElement("input");inp.type="time";inp.value=hhmm(st.t);
+  inp.onchange=e=>{if(!e.target.value)return;snap();
+   st.t=setTime(st.t,e.target.value);S.timesOk=false;save();render();};
+  const len=document.createElement("span");len.className="len";
+  len.textContent=mins(d.dur)+" min";
+  [ro,ar,inp,len].forEach(x=>t.appendChild(x));
+  r.appendChild(t);
+  const bar=document.createElement("div");bar.className="bar";
+  const fill=document.createElement("i");
+  fill.style.width=(max?Math.max(2,Math.round(d.dur/max*100)):2)+"%";
+  bar.appendChild(fill);r.appendChild(bar);
+  w.appendChild(r);});
+
+ const ok=document.createElement("button");
+ ok.className="rgo"+(S.timesOk?" ok":"");
+ ok.textContent=S.timesOk?"\u2713 Confirmed \u2014 tap to edit again":"TIMES ARE GOOD TO GO";
+ ok.onclick=()=>{snap();S.timesOk=!S.timesOk;save();render();};
+ w.appendChild(ok);
+ return w;}
+
+function toggle(i){const st=S.steps[i];
+ if(st.t||locked(i))return;
+ snap();st.t=stamp();save();render();}
+
+function tick(){const e=document.getElementById("elapsed"),s=document.getElementById("sub");
+ if(!S.start){e.textContent="0:00";}
+ else{const last=S.steps[LAST].t;
+  e.textContent=mmss((last||Date.now())-S.start);}
+ const d=S.steps.filter(x=>x.t).length;
+ let t=d+" of "+STEPS.length+" steps";
+ const nt=S.steps.filter(x=>x.br.includes(TS_CHIP)).length,
+       nm=S.steps.filter(x=>x.br.includes(MX_CHIP)).length;
+ if(nt)t+=" \u00b7 "+nt+" TS";
+ if(nm)t+=" \u00b7 "+nm+" MX";
+ if(S.offs.length)t+=" \u00b7 "+S.offs.length+" unusual";
+ s.textContent=t;
+ const pc=Math.round(d/STEPS.length*100),pe=document.getElementById("pct");
+ if(pe){pe.textContent=pc+"%";pe.className="pct num"+(pc===100?" full":"");}
+ const u=document.getElementById("undoBtn"),r=document.getElementById("resetBtn"),
+       x=document.getElementById("expBtn"),li=lastDoneIdx();
+ if(u){u.disabled=!UNDO.length;u.textContent=UNDO.length?"Undo":"Nothing to undo";}
+ if(r){r.disabled=li<0;r.textContent=li<0?"Reset last step":"Reset step "+(li+1);}
+ if(x){const ready=S.steps.every(y=>y.t)&&S.timesOk;
+  x.style.display=ready?"block":"none";
+  document.body.style.paddingBottom=ready?"232px":"150px";}}
+setInterval(tick,1000);
+
+function flash(el,msg,back){const old=back||el.textContent;el.textContent=msg;
+ setTimeout(()=>{if(el)el.textContent=old;},1800);}
+function copyText(t){
+ try{const ta=document.createElement("textarea");ta.value=t;
+  ta.style.cssText="position:fixed;top:0;left:0;opacity:0";
+  document.body.appendChild(ta);ta.focus();ta.select();
+  const ok=document.execCommand("copy");ta.remove();if(ok)return Promise.resolve(true);
+ }catch(e){}
+ if(navigator.clipboard)return navigator.clipboard.writeText(t).then(()=>true,()=>false);
+ return Promise.resolve(false);}
+function download(name,text){
+ try{const b=new Blob([text],{type:"text/plain"}),u=URL.createObjectURL(b),
+  a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);
+  a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);return true;
+ }catch(e){return false;}}
+function sheet(h){const m=document.getElementById("modal");
+ m.innerHTML='<div class="veil"><div class="sheet">'+h+'</div></div>';
+ m.querySelector(".veil").onclick=e=>{if(e.target.classList.contains("veil"))shut();};}
+const shut=()=>{document.getElementById("modal").innerHTML="";render();};
+
+function addChip(i){
+ sheet('<h2>Add your own</h2><p>Saved as a tap option on this step from now on.</p>'+
+  '<input class="note" id="cn" placeholder="Short label" autocomplete="off">'+
+  '<button class="close go" id="cy">Add and select</button>'+
+  '<button class="close" id="cx">Cancel</button>');
+ const inp=document.getElementById("cn");setTimeout(()=>inp.focus(),60);
+ const go=()=>{const v=inp.value.trim();if(!v)return shut();
+  if(!CUSTOM.steps[i])CUSTOM.steps[i]=[];
+  if(!CUSTOM.steps[i].includes(v)&&!STEPS[i][1].includes(v)&&v!==TS_CHIP&&v!==MX_CHIP)
+   CUSTOM.steps[i].push(v);
+  snap();if(!S.steps[i].br.includes(v))S.steps[i].br.push(v);
+  stamp();saveCustom();save();shut();};
+ document.getElementById("cy").onclick=go;
+ inp.onkeydown=e=>{if(e.key==="Enter")go();};
+ document.getElementById("cx").onclick=shut;}
+
+document.getElementById("undoBtn").onclick=()=>{
+ if(!UNDO.length)return;
+ S=JSON.parse(UNDO.pop());S.mxs=S.mxs||{};S.offs=S.offs||[];S.timesOk=!!S.timesOk;
+ save();render();};
+document.getElementById("resetBtn").onclick=()=>{
+ const i=lastDoneIdx();if(i<0)return;
+ snap();S.steps[i].t=null;save();render();
+ const n=document.querySelectorAll(".step")[i];
+ if(n)window.scrollTo({top:Math.max(0,n.offsetTop-90),behavior:"smooth"});};
+
+document.getElementById("offBtn").onclick=()=>{
+ sheet('<h2>Unusual event</h2><p>Anything that belongs to no step. Time stamps itself.</p>'+
+  '<textarea class="note" id="on" rows="4" placeholder="What happened"></textarea>'+
+  '<input class="note" id="om" inputmode="numeric" placeholder="Minutes it cost (optional)">'+
+  '<button class="close go" id="oy">Log it</button>'+
+  '<button class="close" id="ox">Cancel</button>');
+ document.getElementById("oy").onclick=()=>{
+  const t=document.getElementById("on").value.trim();
+  if(t){snap();S.offs.push({t:stamp(),text:t,min:document.getElementById("om").value.trim()});save();}
+  shut();};
+ document.getElementById("ox").onclick=shut;};
+
+["truck","trailer","mission","op"].forEach(k=>{
+ document.getElementById(k).oninput=e=>{S.hdr[k]=e.target.value;save();};});
+
+function statusLine(){
+ const d=S.steps.filter(x=>x.t).length,pc=Math.round(d/STEPS.length*100),
+       i=curIdx(),bits=[];
+ if(S.hdr.truck)bits.push(S.hdr.truck);
+ bits.push(pc+"% ("+d+"/"+STEPS.length+")");
+ bits.push(i<STEPS.length?"on: "+STEPS[i][0]:"departed");
+ if(S.start)bits.push(mmss((S.steps[LAST].t||Date.now())-S.start)+" elapsed");
+ const open=S.steps.filter(x=>!x.t&&x.br.some(y=>!GOOD.includes(y))).length;
+ if(open)bits.push(open+" open issue"+(open===1?"":"s"));
+ return bits.join(" \u00b7 ");}
+
+document.getElementById("clock").onclick=()=>{
+ const sub=document.getElementById("sub"),was=sub.textContent;
+ copyText(statusLine()).then(ok=>{
+  sub.textContent=ok?"Status copied \u2014 paste it in Slack":"Could not copy";
+  setTimeout(()=>{sub.textContent=was;},2200);});};
+
+function report(){const h=S.hdr,L=[];
+ L.push("LAUNCH LOG \u2014 "+new Date(S.start||Date.now()).toLocaleDateString());
+ L.push("Truck "+(h.truck||"\u2014")+" \u00b7 Trailer "+(h.trailer||"\u2014")+
+  " \u00b7 "+(h.mission||"\u2014")+" \u00b7 TO "+(h.op||"\u2014"));
+ if(S.start){const last=S.steps.filter(s=>s.t).map(s=>s.t).pop()||Date.now();
+  L.push("Start "+clock(S.start)+" \u00b7 End "+clock(last)+
+   " \u00b7 Total "+mins(last-S.start)+" min");}
+ const D=durations(), top=D.slice().sort((x,y)=>y.dur-x.dur).slice(0,3).map(x=>x.i);
+ L.push("");L.push("STEPS");
+ D.forEach(d=>{const st=S.steps[d.i];
+  L.push(clock(st.t)+"  ["+mins(d.dur)+"m]"+(top.indexOf(d.i)>-1?" *":"  ")+"  "+
+   (d.i+1)+". "+STEPS[d.i][0]);
+  st.br.forEach(x=>L.push("        \u00b7 "+x));
+  if(S.mxs[d.i])L.push("        \u00b7 Mx outcome: "+S.mxs[d.i]);
+  if(st.note)L.push("        \u00b7 notes: "+st.note);});
+ if(top.length){L.push("");L.push("LONGEST: "+top.map(i=>(i+1)+". "+STEPS[i][0]).join("; "));}
+ const skip=S.steps.map((s,i)=>s.t?null:STEPS[i][0]).filter(Boolean);
+ if(skip.length){L.push("");L.push("NOT LOGGED: "+skip.join("; "));}
+ const nts=S.steps.filter(x=>x.br.includes(TS_CHIP)).length;
+ const nmx=S.steps.filter(x=>x.br.includes(MX_CHIP)).length;
+ if(nts||nmx){L.push("");
+  if(nts)L.push("TS THREADS OPENED: "+nts);
+  if(nmx)L.push("MX FINDINGS: "+nmx+" ("+
+   Object.keys(S.mxs).filter(k=>S.mxs[k]==="Unresolved").length+" unresolved)");}
+ if(S.offs.length){L.push("");L.push("UNUSUAL EVENTS");
+  S.offs.forEach(x=>L.push(clock(x.t)+(x.min?"  ["+x.min+"m]":"")+"  "+x.text));}
+ return L.join("\n");}
+
+document.getElementById("expBtn").onclick=()=>{const txt=report();
+ const h=S.hdr,fn="launch_"+(h.truck||"truck").replace(/[^A-Za-z0-9_-]/g,"")+"_"+
+  new Date(S.start||Date.now()).toISOString().slice(0,10)+".txt";
+ sheet('<h2>Launch summary</h2><p>Long-press the text to select it, or use a button below.</p>'+
+  '<pre class="out" id="op2"></pre>'+
+  '<button class="close go" id="cp">Copy to clipboard</button>'+
+  '<button class="close alt" id="sh">Share</button>'+
+  '<button class="close" id="dl">Download as a file</button>'+
+  '<button class="close" id="nw">Start a new launch</button>'+
+  '<button class="close" id="cx">Back</button>');
+ document.getElementById("op2").textContent=txt;
+ const cp=document.getElementById("cp");
+ cp.onclick=()=>copyText(txt).then(ok=>flash(cp,ok?"Copied":"Could not copy \u2014 long-press the text","Copy to clipboard"));
+ const sh=document.getElementById("sh");
+ sh.onclick=()=>{let started=false;
+  try{if(navigator.share){const r=navigator.share({title:"Launch log",text:txt});
+   if(r&&typeof r.then==="function"){started=true;
+    r.catch(err=>{if(err&&err.name==="AbortError")return;
+     copyText(txt).then(ok=>flash(sh,ok?"Sharing blocked \u2014 copied instead":"Sharing blocked here","Share"));});}}
+  }catch(e){started=false;}
+  if(!started)copyText(txt).then(ok=>flash(sh,ok?"No sharing in this preview \u2014 copied instead":"No sharing in this preview","Share"));};
+ const dl=document.getElementById("dl");
+ dl.onclick=()=>{if(!download(fn,txt))flash(dl,"Download blocked here","Download as a file");};
+ const nw=document.getElementById("nw");let armed=false;
+ nw.onclick=()=>{
+  if(!armed){armed=true;nw.className="close go";nw.textContent="Tap again to clear this launch";
+   setTimeout(()=>{if(armed){armed=false;nw.className="close";nw.textContent="Start a new launch";}},4000);
+   return;}
+  snap();const k=S.hdr.op;S=blank();S.hdr.op=k;
+  ["truck","trailer","mission"].forEach(y=>document.getElementById(y).value="");
+  save();shut();};
+ document.getElementById("cx").onclick=shut;};
+
+(async()=>{const c=await DB.get("launchlog_custom");
+ if(c){try{const p=JSON.parse(c);if(p&&p.steps)CUSTOM=p;}catch(e){}}
+ const r=await DB.get("launchlog");
+ if(r){try{const p=JSON.parse(r);
+  if(p&&p.steps&&p.steps.length===STEPS.length){S=p;S.mxs=S.mxs||{};S.offs=S.offs||[];S.timesOk=!!S.timesOk;}}catch(e){}}
+ ["truck","trailer","mission","op"].forEach(k=>document.getElementById(k).value=S.hdr[k]||"");
+ render();})();
+</script>
+</body>
+</html>
